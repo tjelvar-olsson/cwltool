@@ -7,7 +7,7 @@ from typing import Any, Callable, Text, Type, Union
 
 from . import expression
 from .errors import WorkflowException
-from .pathmapper import PathMapper, adjustFileObjs, normalizeFilesDirs
+from .pathmapper import PathMapper, adjustFileObjs, normalizeFilesDirs, getListing
 from .stdfsaccess import StdFsAccess
 from .utils import aslist
 
@@ -111,9 +111,10 @@ class Builder(object):
 
             if schema["type"] == "File":
                 self.files.append(datum)
-                if binding and binding.get("loadContents"):
-                    with self.fs_access.open(datum["location"], "rb") as f:
-                        datum["contents"] = f.read(CONTENT_LIMIT)
+                if binding:
+                    if binding.get("loadContents"):
+                        with self.fs_access.open(datum["location"], "rb") as f:
+                            datum["contents"] = f.read(CONTENT_LIMIT)
 
                 if "secondaryFiles" in schema:
                     if "secondaryFiles" not in datum:
@@ -141,6 +142,10 @@ class Builder(object):
                 adjustFileObjs(datum.get("secondaryFiles", []), _capture_files)
 
             if schema["type"] == "Directory":
+                if binding:
+                    if binding.get("loadListing", True):
+                        getListing(self.fs_access, datum)
+                getListing(self.fs_access, datum)
                 self.files.append(datum)
 
         # Position to front of the sort key

@@ -161,22 +161,6 @@ def adjustFilesWithSecondary(rec, op, primary=None):
             adjustFilesWithSecondary(d, op, primary)
 
 
-def getListing(fs_access, rec):
-    # type: (StdFsAccess, Dict[Text, Any]) -> None
-    if "listing" not in rec:
-        listing = []
-        loc = rec["location"]
-        for ld in fs_access.listdir(loc):
-            if fs_access.isdir(ld):
-                ent = {u"class": u"Directory",
-                       u"location": ld}
-                getListing(fs_access, ent)
-                listing.append(ent)
-            else:
-                listing.append({"class": "File", "location": ld})
-        rec["listing"] = listing
-
-
 def stageFiles(pm, stageFunc, ignoreWritable=False):
     # type: (PathMapper, Callable[..., Any], bool) -> None
     for f, p in pm.items():

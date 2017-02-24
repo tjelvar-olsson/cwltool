@@ -137,19 +137,22 @@ class CommandLineJob(object):
         env = None  # type: Union[MutableMapping[Text, Text], MutableMapping[str, str]]
         if docker_req and kwargs.get("use_container") is not False:
             env = os.environ
-            img_id = docker.get_from_requirements(docker_req, docker_is_req, pull_image)
+            img_id = docker.get_from_requirements(docker_req, True, pull_image)
         elif kwargs.get("default_container", None) is not None:
             env = os.environ
             img_id = kwargs.get("default_container")
 
-        if docker_is_req and img_id is None:
-            raise WorkflowException("Docker is required for running this tool.")
+        if docker_req and img_id is None:
+            if docker_is_req:
+                raise WorkflowException("Docker is required to run this tool.")
+            else:
+                raise WorkflowException("Docker is not available for this tool, try --no-container to disable Docker.")
 
         if img_id:
             runtime = ["docker", "run", "-i"]
             for src in self.pathmapper.files():
                 vol = self.pathmapper.mapper(src)
-                if vol.type == "File":
+                if vol.type == ("File", "Directory"):
                     runtime.append(u"--volume=%s:%s:ro" % (vol.resolved, vol.target))
                 if vol.type == "CreateFile":
                     createtmp = os.path.join(self.stagedir, os.path.basename(vol.target))

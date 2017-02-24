@@ -107,6 +107,40 @@ def dedup(listing):  # type: (List[Any]) -> List[Any]
 
     return dd
 
+def getListing(fs_access, rec):
+    # type: (StdFsAccess, Dict[Text, Any]) -> None
+    if rec["location"].startswith("_:"):
+        return
+    if "listing" in rec:
+        return
+    listing = []
+    loc = rec["location"]
+    for ld in fs_access.listdir(loc):
+        parse = urlparse.urlparse(ld)
+        bn = os.path.basename(urllib.url2pathname(parse.path))
+        if fs_access.isdir(ld):
+            ent = {u"class": u"Directory",
+                   u"location": ld,
+                   u"basename": bn}
+            getListing(fs_access, ent)
+            listing.append(ent)
+        else:
+            listing.append({"class": "File", "location": ld, "basename": bn})
+    rec["listing"] = listing
+
+def trim_listing(obj):
+    """Remove 'listing' field from Directory objects that are file references.
+
+    When Directory objects represent Keep references, it redundant and
+    potentially very expensive to pass fully enumerated Directory objects
+    between instances of cwl-runner (e.g. a submitting a job, or using the
+    RunInSingleContainer feature), so delete the 'listing' field when it is
+    safe to do so.
+    """
+
+    if obj.get("location", "").startswith("file://") and "listing" in obj:
+        del obj["listing"]
+
 
 class PathMapper(object):
     """Mapping of files from relative path provided in the file to a tuple of
